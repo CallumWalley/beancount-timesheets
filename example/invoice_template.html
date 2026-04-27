@@ -1,0 +1,216 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  {% set totalHrs = (entriesLabour | sum(attribute='units.number') | float ) %}
+  {% set total = ( totalHrs * hourlyRate ) + (entriesOther | sum(attribute='units.number') | float) %}
+  <title>Invoice</title>
+  <style>
+    :root{
+      --primary: #F15A29
+    }
+    * {
+      color: darkslategray;
+      font-family: helvetica, sans-serif;
+    }
+    div{
+      display: block;
+    }
+    #contact_details {
+      font-size: smaller;
+    }
+    #contact_details:after {
+      content: "";
+      display: table;
+      clear: both;
+      }
+    .address {
+      width: 50%;
+    }
+    .address#to {
+      float: right;
+      text-align: right;
+    }
+    .address#from {
+      float: left;
+    }
+    .address>p {
+      margin: 0;
+    }
+    tr:nth-child(even) {
+      background: rgb(212, 212, 212);
+    }
+    td {
+      padding: 0.2em 1em 0.2em 1em;
+    }
+    div#information {
+      display: flex;
+      justify-content: space-between;
+    }
+    table {
+      margin: auto;
+      empty-cells: show;
+    }
+    .tr__units {
+      font-weight: normal;
+      font-style: italic;
+      font-size: small;
+    }
+    .tbody__sub th {
+      font-style: italic;
+      font-weight: normal;
+      font-size: small;
+      color: #F15A29 !important;
+      background-color: white;
+      text-align: left;
+      padding-left: 2em;
+      border-bottom-style: solid;
+      border-bottom-width: thin;
+      border-bottom-color: #F15A29;
+    }
+    #summation td:first-child {
+      background-color: white;
+    }
+    #summation tr:first-child{
+      height: 2em;
+    }
+    #summation tr:last-child{
+      font-weight: bold;
+    }
+    #summary{
+      width: 100%;
+      border: darkslategray solid thin;
+    }
+    body {
+      width: 210mm;
+      height: 297mm;
+      display: block;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>{{companyName}}</h1>
+  <div id="information">
+    <p>TAX INVOICE : {{ dateFirst.strftime('%d/%m/%Y') }} - {{ dateLast.strftime('%d/%m/%Y') }}</p>
+    <p>CODE : {{ customer.code }}{{ '%03d' % customer.invoiceNumber }}</p>
+  </div>
+  <hr>
+  <div id="contact_details">
+    <div  class="address" id="from">
+      <p>{{ issuer.fullName or '' }}</p>
+      <p>{{ issuer.addressStreet or '' }}</p>
+      <p>{{ issuer.addressCity or '' }}</p>
+      <p>{{ issuer.mobilePhone or '' }}</p>
+      <p>{{ issuer.email or '' }}</p>
+    </div>
+    <div class="address" id="to">
+      <p>{{ customer.fullName or '' }}</p>
+      <p>{{ customer.addressStreet or '' }}</p>
+      <p>{{ customer.addressCity or '' }}</p>
+      <p>{{ customer.mobilePhone or '' }}</p>
+      <p>{{ customer.email or '' }}</p>
+    </div>
+  </div>
+  <table style="width: 80%;">
+    <thead>
+      <tr></tr>
+      <tr>
+        <th style="width: 10%;">Date</th>
+        <th style="width: 50%;">Description</th>
+        <th style="width: 10%;">Count</th>
+        <th style="width: 10%;">Cost</th>
+        <th style="width: 10%;">Total</th>
+      </tr>
+      <tr class="tr__units">
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>NZD</td>
+        <td>NZD</td>
+      </tr>
+    </thead>
+    {% if entriesLabour|length > 0 %}
+
+    <tbody class="tbody__sub" id="labour">
+      <tr>
+        <th colspan="5">Labour</th>
+      </tr>
+      {% for entry in entriesLabour %}
+      <tr>
+        <td>{{ entry.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ entry.narration }}</td>
+        <td>{{ entry.units.number }}</td> 
+        <td>
+        <td></td>
+      </tr>
+      {% endfor %}
+      <tr>
+        <td></td>
+        <td>Labour Subtotal</td>
+        <td>{{ totalHrs }}</td>
+        <td>{{  hourlyRate }}</td>
+        <td>{{ '$%.2f' % (totalHrs * hourlyRate) }}</td>
+      </tr>
+      <hr>
+    </tbody>
+    {% endif %}
+    {% if entriesOther|length > 0 %}
+    <tbody class="tbody__sub" id="other">
+      <tr>
+        <th colspan="5">misc</th>
+      </tr>
+
+      {% for entry in entriesOther %}
+      <tr>
+        <td>{{ entry.date.strftime('%d/%m/%Y') }}</td>
+        <td>{{ entry.narration }}</td>
+        <td>1</td>
+        <td>{{ entry.units.number }}</td>
+        <td>{{ '$%.2f' % ((entry.units.number | float) ) }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% endif %}
+    <tbody class="tbody__sub" id="summation">
+      <tr>&nbsp;</tr>
+      <tr>
+        <td colspan="2"></td>
+        <th colspan="2">Subtotal:</th>
+        <!-- <th>{{ totalHrs }} Hrs at {{ "${:,.2f}".format(hourlyRate) }} </th> -->
+        <td>{{ '$%.2f' % ( total ) }}</td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <th colspan="2">GST:</th>
+        <td>{{ '$%.2f' % (total * 0.15) }}</td>
+      </tr>
+      <tr>
+        <td colspan="2"></td>
+        <th colspan="2">Amount Due:</th>
+        <td>{{ '$%.2f' % (total * 1.15) }}</td>
+      </tr>
+    </tbody>
+  </table>
+  <br>
+  <table id="summary">
+    <tbody>
+      <tr>
+        <th>Account Payable</th>
+        <th>GST Number</th>
+        <th>Reference</th>
+        <th>Pay by</th>
+      </tr>
+      <tr>
+        <td>{{ issuer.accountNumber }}</td>
+        <td>{{ issuer.gstNumber }}</td>
+        <td>{{ customer.code }}{{ '%03d' % customer.invoiceNumber }}</td>
+        <td>{{ dateDue.strftime('%d/%m/%Y')  }}</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+
+</html>

@@ -1,0 +1,9 @@
+customers:
+  exampleCustomer:
+    code: EC
+    fullName: Example Customer
+    invoicePath: ./invoices/ExampleCustomer/
+issuers:
+  callumWalley:
+    fullName: Callum Walley
+    hourlyRate: 55
