@@ -3,7 +3,7 @@ customers:
     code: EC
     fullName: Example Customer
     invoicePath: ./invoices/ExampleCustomer/
-issuers:
-  callumWalley:
-    fullName: Callum Walley
-    hourlyRate: 55
+fullName: Callum Walley
+ledgerPath: example/ledger.beancount
+timesheetPath: example/timesheet.beancount
+hourlyRate: 55

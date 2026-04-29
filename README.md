@@ -14,6 +14,14 @@ Core logic for time tracking, period filing, and invoice generation for Beancoun
 pip install beancount-timesheets
 ```
 
+## From repo
+
+```sh
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
 ## setup
 
 You hould have an income account for each customer.
@@ -30,7 +38,7 @@ e.g.
 
 ### 1. Do work
 
-### 2. Record work in current.beancount
+### 2. Record work in timesheet.beancount
 
 For example
 
@@ -48,7 +56,7 @@ This will do a few things.
 
 - All hours worked entries will be seperated by customer and filed away.
 - An 'accountsRecivable` entry will be added for each customer.
-- A new empty current.beancount will be made.
+- A new empty timesheet.beancount will be made.
 
 ### 4. (Optional) Generate invoice
 
@@ -68,14 +76,9 @@ Or, if installed as a script:
 beancount-timesheets <command> [options]
 ```
 
-
-
-
-
-
 ### Commands
 
-- `file-period <current_file> <target_dir> <parent_record>`
+- `file-period <timesheet_file> <target_dir> <parent_record>`
 	- Move unbilled entries to a new period file and update parent record.
 - `generate-invoice <beanfile> <config> <output_dir>`
 	- Generate invoice (HTML/PDF) from a Beancount file and config.

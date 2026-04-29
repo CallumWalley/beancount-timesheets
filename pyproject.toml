@@ -16,7 +16,8 @@ dependencies = [
     "beancount",
     "PyYAML",
     "Jinja2",
-    "pdfkit"
+    "pdfkit",
+    "typer"
 ]
 
 

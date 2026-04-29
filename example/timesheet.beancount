@@ -1,0 +1,9 @@
+2023-03-01 * "1000 1030" "What you were doing"
+    Income:HOURS:Uninvoiced:ExampleCustomerOne   0.5 HOURS
+    Income:HoursWorked
+2023-03-15 * "1100 1200" "What you were doing"
+    Income:HOURS:Uninvoiced:ExampleCustomerTwo   1 HOURS
+    Income:HoursWorked
+2023-03-30 * "1000 1030" "What you were doing"
+    Income:HOURS:Uninvoiced:ExampleCustomerOne   0.5 HOURS
+    Income:HoursWorked
