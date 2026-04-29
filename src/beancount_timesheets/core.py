@@ -1,0 +1,151 @@
+import os
+import re
+import unicodedata
+import os
+from datetime import date
+from beancount.core.data import Transaction
+from beancount.parser import printer
+
+
+DEFAULT_TIMESHEET = """
+; Example transaction
+;2023-03-31 * "1000 1030" "What you were doing"
+;    Income:HOURS:Uninvoiced:ExampleCustomer   0.5 HOURS
+;    Income:HoursWorked
+"""
+
+DEFAULT_CONFIG = {
+    "customers": None,
+    "fullName": "Issuer",
+    "ledgerPath": "invoice.beancount",
+    "timesheetPath": "timesheet.beancount",
+    "hourlyRate": 0,
+    "gstRate": 0.15
+}
+
+DEFAULT_CUSTOMER = {
+    "fullName": None, 
+    "invoicePath": "./invoices/{code}{count}",
+    "archivePath": "filed/{slug}_{min_date}_{max_date}.beancount",
+    "hourlyRate": None,
+    "code": None,
+    # 'slug' and 'code' can be generated from the key
+}
+
+
+def path_safe(value):
+    """Make a string safe for use in file paths."""
+    value = str(value)
+    value = unicodedata.normalize('NFKD', value)
+    value = re.sub(r'[\s/\\:;"\'<>|?*]', '_', value)
+    value = re.sub(r'[^\w.-]', '', value)
+    value = value.strip('._')
+    return value or 'X'
+
+class SafeDict(dict):
+    def __missing__(self, key):
+        return ''
+
+def format_path(template, **kwargs):
+    """
+    Format a path template string with all relevant info, then make the final result path safe.
+    Always includes all provided values, so any template can use any field.
+    """
+    result = template.format_map(SafeDict(kwargs))
+    return path_safe(result)
+
+def write_file(path, content, append=False):
+    """
+    Write content to a file, creating directories as needed.
+    If append is True, append to the file if it exists; otherwise, throw error file exists.
+    """
+    dirpart = os.path.dirname(path)
+    if dirpart:
+        os.makedirs(dirpart, exist_ok=True)
+    try:
+        with open(path, 'a' if append else 'x') as f:
+            f.write(content)
+    except FileExistsError:
+        if not append:
+            raise
+
+def generate_code(cust_key):
+    # Normalize underscores and hyphens to spaces, then split on capital boundaries
+    words = re.findall(r'[A-Z]?[a-z0-9]+|[A-Z]+(?![a-z])', re.sub(r'[_-]', ' ', cust_key))
+    code = ''.join(word[0] for word in words[:-1]) + words[-1]
+    return code[:3].upper()
+
+def ledger_transaction(entries, cust, cust_key, config, min_date, max_date):
+    invoice_code =  cust_key + max_date.replace('-', '')
+    hours = sum(
+        float(m.group(1))
+        for entry in entries if isinstance(entry, Transaction)
+        for posting in entry.postings
+        for m in [re.search(r"([\d.]+) HOURS", entry.narration)] if m
+    )
+    hourly_rate = cust["hourlyRate"] if cust["hourlyRate"] is not None else config["hourlyRate"]
+    gross_income = hourly_rate * hours
+    gst = gross_income * 0.15
+    account_payable = f"Income:ServicesRendered:{cust_key}"
+    account_payable_gst = "Liabilities:AccountsPayable:IRD"
+    account_receivable = f"Assets:AccountsReceivable:{cust_key}"
+    return (
+        f"{date.today().strftime('%Y-%m-%d')} * \"{invoice_code}\" ^{invoice_code}\n"
+        f"    {account_payable.ljust(60)} -{gross_income} NZD ; {hours} HOURS @ {hourly_rate} NZD\n"
+        f"    {account_payable_gst.ljust(60)} -{gst} NZD\n"
+        f"    {account_receivable}\n"
+    )
+
+def render_entries(entries):
+    return "\n".join(printer.format_entry(e) for e in entries)
+
+def match_customer(entry, customers):
+    for key, cust in customers.items():
+        pattern = re.compile(rf"Income:HOURS:Uninvoiced:({re.escape(cust['fullName'])}|{re.escape(cust.get('code',''))})")
+        if any(pattern.search(posting.account) for posting in entry.postings):
+            return key
+    for posting in entry.postings:
+        m = re.match(r"Income:HOURS:Uninvoiced:([\w]+)", posting.account)
+        if m:
+            return m.group(1)
+    return None
+
+def parse_config(config_path):
+    # Load config and fill sensible defaults
+    with open(config_path) as f:
+        config = yaml.safe_load(f)
+
+
+    set_default(config, DEFAULT_CONFIG, "config")
+
+    if "customers" not in config or not config["customers"]:
+        config["customers"] = {"default": {k: v for k, v in DEFAULT_CUSTOMER.items() if v is not None}}
+
+    # Use the dictionary key as the canonical slug/identifier
+    new_customers = {}
+    for key, cust in config["customers"].items():
+        set_default(cust, DEFAULT_CUSTOMER, f"customer '{key}'")
+        # Generate slug and code from key
+        cust["code"] = key.upper()
+        # If fullName is missing, use slug as fallback
+        if not cust.get("fullName"):
+            cust["fullName"] = key
+        new_customers[key] = cust
+    config["customers"] = new_customers
+
+    return config
+
+def set_default(obj, defaults, context="config"):
+    for key in obj.keys():
+        if key not in defaults:
+            print(f"Warning: Unrecognized {context} key: '{key}'")
+    for k, v in defaults.items():
+        if k not in obj or obj[k] is None:
+            obj[k] = v
+
+def read_timesheet(timesheet):
+    path = Path(timesheet)
+    if not path.exists():
+        print(f"Warning: {timesheet} does not exist. Creating '{timesheet}'.")
+        path.write_text(DEFAULT_TIMESHEET)
+    return path.read_text().splitlines(keepends=True)

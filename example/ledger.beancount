@@ -1,0 +1,36 @@
+2026-04-28 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-28 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-28 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-29 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-29 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-29 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-29 * "ExampleCustomer20230415" ^ExampleCustomer20230415
+    Income:ServicesRendered:ExampleCustomer                      -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomer
+2026-04-29 * "ExampleCustomerOne20230501" ^ExampleCustomerOne20230501
+    Income:ServicesRendered:ExampleCustomerOne                   -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomerOne
+2026-04-29 * "ExampleCustomerTwo20230515" ^ExampleCustomerTwo20230515
+    Income:ServicesRendered:ExampleCustomerTwo                   -0 NZD ; 0 HOURS @ 55 NZD
+    Liabilities:AccountsPayable:IRD                              -0.0 NZD
+    Assets:AccountsReceivable:ExampleCustomerTwo
