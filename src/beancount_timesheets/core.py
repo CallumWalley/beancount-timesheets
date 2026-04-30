@@ -1,3 +1,4 @@
+import glob
 import os
 import re
 import unicodedata
@@ -5,7 +6,8 @@ import os
 from datetime import date
 from beancount.core.data import Transaction
 from beancount.parser import printer
-
+import yaml
+from pathlib import Path
 
 DEFAULT_TIMESHEET = """
 ; Example transaction
@@ -17,17 +19,18 @@ DEFAULT_TIMESHEET = """
 DEFAULT_CONFIG = {
     "customers": None,
     "fullName": "Issuer",
-    "ledgerPath": "invoice.beancount",
-    "timesheetPath": "timesheet.beancount",
-    "hourlyRate": 0,
+    "ledgerPath": "invoice.beancount",                                  # Where to record generated invoices.
+    "timesheetPath": "timesheet.beancount",                             # Where to read timesheet from.
+    "hourlyRate": 50,
     "gstRate": 0.15
 }
 
 DEFAULT_CUSTOMER = {
     "fullName": None, 
-    "invoicePath": "./invoices/{code}{count}",
-    "archivePath": "filed/{slug}_{min_date}_{max_date}.beancount",
-    "hourlyRate": None,
+    "invoiceKey": "{code}{count}",                                      # Unique key for this invoice.
+    "invoicePath": "invoices/slug/{invoiceKey}.pdf",                        # Where to file invoices. Can be multiple.
+    "archivePath": "archive/{slug}/{min_date}_{max_date}.beancount",    # Where to file timesheets that have been proccssed
+    "hourlyRate": DEFAULT_CONFIG["hourlyRate"],
     "code": None,
     # 'slug' and 'code' can be generated from the key
 }
@@ -52,7 +55,10 @@ def format_path(template, **kwargs):
     Always includes all provided values, so any template can use any field.
     """
     result = template.format_map(SafeDict(kwargs))
-    return path_safe(result)
+    # Normalize all slashes to os.sep for splitting
+    parts = [p for p in result.split(os.sep) if p != '']
+    safe_parts = [path_safe(part) for part in parts]
+    return os.sep.join(safe_parts)
 
 def write_file(path, content, append=False):
     """
@@ -85,7 +91,7 @@ def ledger_transaction(entries, cust, cust_key, config, min_date, max_date):
     )
     hourly_rate = cust["hourlyRate"] if cust["hourlyRate"] is not None else config["hourlyRate"]
     gross_income = hourly_rate * hours
-    gst = gross_income * 0.15
+    gst = gross_income * config["gstRate"]
     account_payable = f"Income:ServicesRendered:{cust_key}"
     account_payable_gst = "Liabilities:AccountsPayable:IRD"
     account_receivable = f"Assets:AccountsReceivable:{cust_key}"
@@ -136,11 +142,12 @@ def parse_config(config_path):
     return config
 
 def set_default(obj, defaults, context="config"):
-    for key in obj.keys():
-        if key not in defaults:
-            print(f"Warning: Unrecognized {context} key: '{key}'")
+    for k in obj.keys():
+        if k not in defaults:
+            print(f"Warning: Unrecognized {context} key: '{k}'")
     for k, v in defaults.items():
         if k not in obj or obj[k] is None:
+            print(f"Info: Using default for '{k}': {v!r}")
             obj[k] = v
 
 def read_timesheet(timesheet):
@@ -149,3 +156,36 @@ def read_timesheet(timesheet):
         print(f"Warning: {timesheet} does not exist. Creating '{timesheet}'.")
         path.write_text(DEFAULT_TIMESHEET)
     return path.read_text().splitlines(keepends=True)
+
+def get_next_count(path_pattern, **variables):
+    """
+    Given a path pattern (e.g. './invoices/{code}{count}.pdf'), return the next count integer to use.
+    All variable fields (e.g. {count}, {min_date}, {max_date}, etc.) are wildcarded for globbing, except those provided in variables.
+    """
+    # Find all {var} in the pattern
+    var_fields = re.findall(r'\{(\w+)\}', path_pattern)
+    glob_pattern = path_pattern
+    regex_pat = re.escape(path_pattern)
+    for var in var_fields:
+        if var == 'count':
+            glob_pattern = glob_pattern.replace(f'{{{var}}}', '*')
+            regex_pat = regex_pat.replace(rf'\{{{var}\}}', r'(\\d+)')
+        elif var in variables:
+            val = str(variables[var])
+            glob_pattern = glob_pattern.replace(f'{{{var}}}', val)
+            regex_pat = regex_pat.replace(re.escape(f'{{{var}}}'), re.escape(val))
+        else:
+            glob_pattern = glob_pattern.replace(f'{{{var}}}', '*')
+            regex_pat = regex_pat.replace(re.escape(f'{{{var}}}'), r'.*')
+    files = glob.glob(glob_pattern)
+    counts = []
+    for f in files:
+        m = re.search(regex_pat, f)
+        if m:
+            try:
+                counts.append(int(m.group(1)))
+            except Exception:
+                pass
+    if counts:
+        return max(counts) + 1
+    return 1

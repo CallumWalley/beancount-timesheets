@@ -11,7 +11,7 @@
             "request": "launch",
             "program": "src/beancount_timesheets/file_period.py",
             "console": "integratedTerminal",
-            "args": ["--config", "example/config.yml"]
+            "args": ["--config", "example/config.yml", "-d"]
         }
     ]
 }

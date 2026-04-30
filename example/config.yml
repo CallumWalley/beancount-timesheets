@@ -1,8 +1,11 @@
 customers:
   exampleCustomer:
-    code: EC
+    code: EC1
     fullName: Example Customer
-    invoicePath: ./invoices/ExampleCustomer/
+    archivePath: example/invoicedTimesheets/{slug}/{min_date}_{max_date}.beancount
+    invoicePath: 
+      - example/invoices/{slug}/{code}{count}.pdf
+      - example/invoices/{slug}/{code}{count}.html
 fullName: Callum Walley
 ledgerPath: example/ledger.beancount
 timesheetPath: example/timesheet.beancount

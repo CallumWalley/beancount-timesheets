@@ -20,6 +20,8 @@ dependencies = [
     "typer"
 ]
 
+[project.optional-dependencies]
+test = ["pytest"]
 
 [project.scripts]
 file-period = "beancount_timesheets.file_period_cli:main"

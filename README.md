@@ -95,3 +95,20 @@ from beancount_timesheets import record_hours, file_period, generate_invoice
 ## For Plugin Authors
 
 This package is designed to be Fava-agnostic and can be used as a backend for Fava plugins (e.g., fava-timesheets).
+
+## Testing
+
+Automated tests are provided using [pytest](https://pytest.org/). Tests cover:
+- Timesheet processing and file creation
+- Timesheet reset after processing
+- Dry run mode (no file changes, output only)
+- Edge cases (new customers, error handling, etc.)
+
+To run the tests:
+
+```sh
+pip install pytest
+pytest tests/
+```
+
+See `tests/test_file_period.py` for example test cases and usage.
