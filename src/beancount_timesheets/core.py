@@ -9,6 +9,28 @@ from beancount.parser import printer
 import yaml
 from pathlib import Path
 
+
+_REPORTER = None
+
+
+def set_reporter(reporter):
+    global _REPORTER
+    _REPORTER = reporter
+
+
+def emit(level, message):
+    if _REPORTER is not None:
+        _REPORTER(level, message)
+    print(f"{level.capitalize()}: {message}")
+
+
+def emit_warning(message):
+    emit("warning", message)
+
+
+def emit_info(message):
+    emit("info", message)
+
 DEFAULT_TIMESHEET = """
 ; Example transaction
 ;2023-03-31 * "1000 1030" "What you were doing"
@@ -144,16 +166,16 @@ def parse_config(config_path):
 def set_default(obj, defaults, context="config"):
     for k in obj.keys():
         if k not in defaults:
-            print(f"Warning: Unrecognized {context} key: '{k}'")
+            emit_warning(f"Unrecognized {context} key: '{k}'")
     for k, v in defaults.items():
         if k not in obj or obj[k] is None:
-            print(f"Info: Using default for '{k}': {v!r}")
+            emit_info(f"Using default for '{k}': {v!r}")
             obj[k] = v
 
 def read_timesheet(timesheet):
     path = Path(timesheet)
     if not path.exists():
-        print(f"Warning: {timesheet} does not exist. Creating '{timesheet}'.")
+        emit_warning(f"{timesheet} does not exist. Creating '{timesheet}'.")
         path.write_text(DEFAULT_TIMESHEET)
     return path.read_text().splitlines(keepends=True)
 

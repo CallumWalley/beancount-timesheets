@@ -3,4 +3,4 @@
 # Expose main modules
 from .file_period import *
 from .core import *
-from .invoice import *
+from .generate_invoice import *

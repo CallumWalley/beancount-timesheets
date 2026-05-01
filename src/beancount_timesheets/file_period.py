@@ -15,8 +15,10 @@ def file_period(
     config = core.parse_config(config)
     timesheet_file = core.format_path( config["timesheetPath"], **config )
 
-    print(f"Reading {timesheet_file}")
+    core.emit_info(f"Reading {timesheet_file}")
     entries, errors, options_map = load_file(timesheet_file)
+    for error in errors:
+        core.emit_warning(str(error))
     if not entries:
         raise Exception("Warning: No entries to file.")
 
@@ -31,14 +33,14 @@ def file_period(
                 new_cust["code"] = core.generate_code(cust_key)
                 new_cust["fullName"] = cust_key
                 customers[cust_key] = new_cust
-                print(f"Warning: '{cust_key}' not found in customer list, using default.")
+                core.emit_warning(f"'{cust_key}' not found in customer list, using default.")
             customer_entries[cust_key].append(entry)
 
-    print(f"Found {len(entries)} total entries.")
+    core.emit_info(f"Found {len(entries)} total entries.")
 
     for cust_key, period_entries in customer_entries.items():
         cust = customers[cust_key]
-        print(f"    {cust_key}: {len(period_entries)}")
+        core.emit_info(f"{cust_key}: {len(period_entries)}")
         dates = [str(entry.date) for entry in period_entries]
         min_date = min(dates)
         max_date = max(dates)
@@ -52,14 +54,14 @@ def file_period(
         ledgerSummary = core.ledger_transaction(period_entries, cust, cust_key, config, min_date, max_date)
 
         if dry_run:
-            print(f"Would write to {archivePath}:\n---\n{archiveTimesheet}---\n")
-            print(f"Would append to {ledgerPath}:\n---\n{ledgerSummary}---\n")
+            core.emit_info(f"Would write to {archivePath}:\n---\n{archiveTimesheet}---\n")
+            core.emit_info(f"Would append to {ledgerPath}:\n---\n{ledgerSummary}---\n")
 
         else:
             core.write_file(archivePath, archiveTimesheet + "\n", append=False)
             core.write_file(ledgerPath, ledgerSummary, append=True)
     if dry_run:
-        print(f"Would overrite {timesheet_file}:\n---\n{core.DEFAULT_TIMESHEET}---\n")
+        core.emit_info(f"Would overrite {timesheet_file}:\n---\n{core.DEFAULT_TIMESHEET}---\n")
     else:
         core.write_file(timesheet_file, core.DEFAULT_TIMESHEET)
 
