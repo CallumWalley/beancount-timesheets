@@ -24,8 +24,8 @@ dependencies = [
 test = ["pytest"]
 
 [project.scripts]
-file-period = "beancount_timesheets.file_period_cli:main"
-generate-invoice = "beancount_timesheets.generate_invoice_cli:main"
+file-period = "beancount_timesheets.file_period:main"
+generate-invoice = "beancount_timesheets.generate_invoice:main"
 
 [project.urls]
 Homepage = "https://github.com/callumwalley/beancount-timesheets"

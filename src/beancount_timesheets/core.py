@@ -1,6 +1,10 @@
 import glob
 import os
 import re
+import shlex
+import subprocess
+import sys
+import tempfile
 import unicodedata
 import os
 from datetime import date
@@ -11,6 +15,12 @@ from pathlib import Path
 
 
 _REPORTER = None
+_SKIP_WRITE_PROMPT = False
+
+
+def set_write_approval(skip_prompt=False):
+    global _SKIP_WRITE_PROMPT
+    _SKIP_WRITE_PROMPT = skip_prompt
 
 
 def set_reporter(reporter):
@@ -31,8 +41,7 @@ def emit_warning(message):
 def emit_info(message):
     emit("info", message)
 
-DEFAULT_TIMESHEET = """
-; Example transaction
+DEFAULT_TIMESHEET = """; Example transaction
 ;2023-03-31 * "1000 1030" "What you were doing"
 ;    Income:HOURS:Uninvoiced:ExampleCustomer   0.5 HOURS
 ;    Income:HoursWorked
@@ -77,10 +86,14 @@ def format_path(template, **kwargs):
     Always includes all provided values, so any template can use any field.
     """
     result = template.format_map(SafeDict(kwargs))
+    is_absolute = os.path.isabs(result)
     # Normalize all slashes to os.sep for splitting
     parts = [p for p in result.split(os.sep) if p != '']
     safe_parts = [path_safe(part) for part in parts]
-    return os.sep.join(safe_parts)
+    formatted = os.sep.join(safe_parts)
+    if is_absolute:
+        return os.sep + formatted
+    return formatted
 
 def write_file(path, content, append=False):
     """
@@ -90,12 +103,70 @@ def write_file(path, content, append=False):
     dirpart = os.path.dirname(path)
     if dirpart:
         os.makedirs(dirpart, exist_ok=True)
+
+    reviewed_content = review_write(path, content)
+    if reviewed_content is None:
+        emit_info(f"Skipped write to {path}.")
+        return False
+
     try:
         with open(path, 'a' if append else 'x') as f:
-            f.write(content)
+            f.write(reviewed_content)
     except FileExistsError:
         if not append:
             raise
+    return True
+
+
+def overwrite_file(path, content):
+    """Overwrite a file after optional editor review/approval."""
+    dirpart = os.path.dirname(path)
+    if dirpart:
+        os.makedirs(dirpart, exist_ok=True)
+
+    reviewed_content = review_write(path, content)
+    if reviewed_content is None:
+        emit_info(f"Skipped write to {path}.")
+        return False
+
+    with open(path, "w") as f:
+        f.write(reviewed_content)
+    return True
+
+
+def review_write(path, content):
+    """
+    Allow the user to review proposed file contents in $EDITOR and approve.
+    Returns approved content, or None if declined.
+    """
+    if _SKIP_WRITE_PROMPT or not sys.stdin.isatty() or not sys.stdout.isatty():
+        return content
+
+    editor = os.environ.get("EDITOR", "vi")
+    tmp_path = None
+    try:
+        suffix = os.path.splitext(path)[1] or ".tmp"
+        with tempfile.NamedTemporaryFile("w+", delete=False, suffix=suffix) as tmp:
+            tmp.write(content)
+            tmp.flush()
+            tmp_path = tmp.name
+
+        command = shlex.split(editor) + [tmp_path]
+        subprocess.run(command, check=True)
+
+        with open(tmp_path) as tmp:
+            reviewed_content = tmp.read()
+
+        answer = input(f"Approve write to {path}? [y/N]: ").strip().lower()
+        if answer in {"y", "yes"}:
+            return reviewed_content
+        return None
+    except (OSError, subprocess.CalledProcessError) as err:
+        emit_warning(f"Editor review failed ({err}); skipping write to '{path}'.")
+        return None
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
+            os.unlink(tmp_path)
 
 def generate_code(cust_key):
     # Normalize underscores and hyphens to spaces, then split on capital boundaries
@@ -138,10 +209,21 @@ def match_customer(entry, customers):
             return m.group(1)
     return None
 
+def resolve_config_path(config_dir, value):
+    if value is None:
+        return value
+    if isinstance(value, list):
+        return [resolve_config_path(config_dir, item) for item in value]
+    if os.path.isabs(value):
+        return value
+    return os.path.join(config_dir, value)
+
 def parse_config(config_path):
     # Load config and fill sensible defaults
     with open(config_path) as f:
         config = yaml.safe_load(f)
+
+    config_dir = os.path.dirname(os.path.abspath(config_path))
 
 
     set_default(config, DEFAULT_CONFIG, "config")
@@ -158,8 +240,13 @@ def parse_config(config_path):
         # If fullName is missing, use slug as fallback
         if not cust.get("fullName"):
             cust["fullName"] = key
+        cust["archivePath"] = resolve_config_path(config_dir, cust["archivePath"])
+        cust["invoicePath"] = resolve_config_path(config_dir, cust["invoicePath"])
         new_customers[key] = cust
     config["customers"] = new_customers
+
+    config["ledgerPath"] = resolve_config_path(config_dir, config["ledgerPath"])
+    config["timesheetPath"] = resolve_config_path(config_dir, config["timesheetPath"])
 
     return config
 

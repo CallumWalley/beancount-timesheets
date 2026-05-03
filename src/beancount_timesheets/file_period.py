@@ -7,10 +7,9 @@ from beancount.core.data import Transaction
 from beancount.parser import printer
 import beancount_timesheets.core as core
 
-def file_period(
-    config: str = typer.Option("beancount-timesheets-config.yml", "-c", "--config", help="Path to config.yml (default: ./config.yml next to timesheet file)"),
-    dry_run: bool = typer.Option(False, "-d", "--dry-run", help="Print changes instead of writing to files"),
-):
+def file_period(config="beancount-timesheets-config.yml", dry_run=False, yes=False):
+
+    core.set_write_approval(skip_prompt=yes)
 
     config = core.parse_config(config)
     timesheet_file = core.format_path( config["timesheetPath"], **config )
@@ -54,16 +53,28 @@ def file_period(
         ledgerSummary = core.ledger_transaction(period_entries, cust, cust_key, config, min_date, max_date)
 
         if dry_run:
-            core.emit_info(f"Would write to {archivePath}:\n---\n{archiveTimesheet}---\n")
-            core.emit_info(f"Would append to {ledgerPath}:\n---\n{ledgerSummary}---\n")
+            core.emit_info(f"Would write period file to {archivePath}:\n---\n{archiveTimesheet}---\n")
+            core.emit_info(f"Would append ledger entry to {ledgerPath}:\n---\n{ledgerSummary}---\n")
 
         else:
             core.write_file(archivePath, archiveTimesheet + "\n", append=False)
             core.write_file(ledgerPath, ledgerSummary, append=True)
     if dry_run:
-        core.emit_info(f"Would overrite {timesheet_file}:\n---\n{core.DEFAULT_TIMESHEET}---\n")
+        core.emit_info(f"Would overwrite {timesheet_file}:\n---\n{core.DEFAULT_TIMESHEET}---\n")
     else:
-        core.write_file(timesheet_file, core.DEFAULT_TIMESHEET)
+        core.overwrite_file(timesheet_file, core.DEFAULT_TIMESHEET)
+
+
+def file_period_cli(
+    config: str = typer.Option("beancount-timesheets-config.yml", "-c", "--config", help="Path to config.yml (default: ./config.yml next to timesheet file)"),
+    dry_run: bool = typer.Option(False, "-d", "--dry-run", help="Print changes instead of writing to files"),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Skip editor review and approval prompts"),
+):
+    file_period(config=config, dry_run=dry_run, yes=yes)
+
+
+def main():
+    typer.run(file_period_cli)
 
 if __name__ == "__main__":
-    typer.run(file_period)
+    main()
