@@ -24,11 +24,11 @@ pip install -e .
 
 ## setup
 
-You hould have an income account for each customer.
+You hould have an income and a receivable account for each customer.
 
 e.g. 
 
-```
+```bean
 1900-01-01 open Assets:AccountsReceivable:ExampleCustomer
 1900-01-01 open Income:ServicesRendered:ExampleCustomer
 ```
@@ -38,7 +38,7 @@ e.g.
 
 ### 1. Do work
 
-### 2. Record work in timesheet.beancount
+### 2. Record work in `timesheet.beancount`
 
 For example
 
@@ -62,29 +62,12 @@ This will do a few things.
 
 run `generate-invoice` will create a nice formatted invoice for you to send.
 
-## CLI Usage
-
-After installation, use the CLI:
-
-```sh
-python -m beancount_timesheets.cli <command> [options]
-```
-
-Or, if installed as a script:
-
-```sh
-beancount-timesheets <command> [options]
-```
-
 ### Commands
 
 - `file-period <timesheet_file> <target_dir> <parent_record>`
 	- Move unbilled entries to a new period file and update parent record.
 - `generate-invoice <beanfile> <config> <output_dir>`
 	- Generate invoice (HTML/PDF) from a Beancount file and config.
-
-
-
 
 ## Library Usage
 
